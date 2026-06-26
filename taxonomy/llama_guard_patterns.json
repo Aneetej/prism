@@ -1,0 +1,145 @@
+{
+  "_comment": "Regex/keyword patterns organized by Llama Guard harm category. All patterns are applied case-insensitively. Keyword entries are exact substring matches after normalization.",
+  "categories": {
+    "S1_violent_crimes": {
+      "description": "Instructions or facilitation of violent crimes against people or property.",
+      "keywords": ["pipe bomb", "molotov cocktail", "ied", "improvised explosive", "make a bomb", "build a bomb", "make explosives", "build explosives"],
+      "patterns": [
+        "\\b(how\\s+(to|do\\s+i|can\\s+i|would\\s+i|do\\s+you)\\s+(make|build|construct|assemble|create)\\s+(a\\s+)?(bomb|explosive|grenade|ied|landmine))\\b",
+        "\\b(instructions?|steps?|guide|tutorial)\\s+(for|to|on)\\s+(making|building|creating|constructing)\\s+(a\\s+)?(bomb|explosive|grenade)\\b",
+        "\\b(step[s\\-]?\\s*(by|for)\\s*step\\s+.{0,40}(kill|attack|harm|assault|murder))\\b",
+        "\\b(instructions?\\s+(for|to)\\s+(kill|murder|assault|attack)\\s+(someone|a person|people))\\b",
+        "\\b(how\\s+(to|do\\s+i|can\\s+i)\\s+(poison|strangle|stab|shoot)\\s+someone)\\b",
+        "\\b(how\\s+(to|do\\s+i|can\\s+i|would\\s+i)\\s+(kill|murder|hurt|harm|attack|assault)\\s+(a\\s+)?(person|someone|people))\\b"
+      ]
+    },
+    "S2_non_violent_crimes": {
+      "description": "Instructions for crimes that do not involve direct violence.",
+      "keywords": ["sql injection tutorial", "phishing kit", "credit card dump", "carding tutorial"],
+      "patterns": [
+        "\\b(how\\s+to\\s+(hack|crack|break\\s+into)\\s+(a\\s+)?(bank|server|account|system|website|network))\\b",
+        "\\b(step[s\\-]?\\s*(by|for)\\s*step\\s+.{0,40}(identity theft|money launder|tax fraud|wire fraud))\\b",
+        "\\b(how\\s+to\\s+(shoplift|steal|pickpocket)\\s+without)\\b"
+      ]
+    },
+    "S3_sex_crimes": {
+      "description": "Sexual offenses and non-consensual sexual content.",
+      "keywords": ["csam", "child pornography", "grooming children", "non-consensual", "rape instructions"],
+      "patterns": [
+        "\\b(child|minor|underage)\\s+(sexual|nude|naked|explicit|pornograph)\\b",
+        "\\b(how\\s+to\\s+groom\\s+(a\\s+)?(child|minor|kid|teen))\\b",
+        "\\b(non[\\-\\s]?consensual\\s+(sex|intercourse|pornograph))\\b"
+      ]
+    },
+    "S4_chemical_biological_weapons": {
+      "description": "Synthesis or weaponisation of chemical or biological agents.",
+      "keywords": ["vx nerve agent", "anthrax spores", "botulinum toxin weaponize"],
+      "patterns": [
+        "\\b(synthesize|produce|manufacture|weaponize)\\s+(sarin|vx|tabun|novichok|ricin|anthrax|botulinum)\\b",
+        "\\b(chemical|biological|radiological|nuclear)\\s+weapon\\b",
+        "\\b(how\\s+to\\s+(make|create|produce)\\s+(a\\s+)?(nerve\\s+agent|bioweapon|weaponized\\s+pathogen))\\b",
+        "\\b(how\\s+(to|do\\s+i|can\\s+i)\\s+(make|create|produce|synthesize|cook|extract|purify))\\s+(sarin|vx|tabun|novichok|ricin|anthrax|botulinum)\\b"
+      ]
+    },
+    "S5_weapons": {
+      "description": "Illegal weapons acquisition, manufacture, or modification.",
+      "keywords": ["ghost gun", "3d print gun", "auto sear", "full auto conversion", "suppressor illegal"],
+      "patterns": [
+        "\\b(how\\s+to\\s+(convert|modify)\\s+(a\\s+)?(gun|firearm|rifle|pistol)\\s+(to|into)\\s+full\\s+auto)\\b",
+        "\\b(how\\s+to\\s+(make|print|build)\\s+(a\\s+)?(ghost\\s+gun|untraceable\\s+(gun|firearm)))\\b",
+        "\\b(how\\s+to\\s+(bypass|remove|defeat)\\s+(a\\s+)?serial\\s+number)\\b"
+      ]
+    },
+    "S6_regulated_substances": {
+      "description": "Synthesis or distribution of controlled substances.",
+      "keywords": ["how to make meth", "synthesize fentanyl", "make mdma", "make lsd"],
+      "patterns": [
+        "\\b(how\\s+(to|do\\s+i|can\\s+i|would\\s+i)\\s+(cook|make|synthesize|produce)\\s+(meth|methamphetamine|heroin|fentanyl|mdma|ecstasy|cocaine|lsd|crack))\\b",
+        "\\b(step[s\\-]?\\s*(by|for)\\s*step\\s+.{0,30}(drug\\s+synthesis|synthesize\\s+(meth|heroin|fentanyl)))\\b"
+      ]
+    },
+    "S7_self_harm": {
+      "description": "Instructions or encouragement of self-harm or suicide.",
+      "keywords": ["how to commit suicide", "how to self harm", "suicide methods"],
+      "patterns": [
+        "\\b(how\\s+to\\s+(commit\\s+suicide|self[\\-\\s]?harm|end\\s+(my|your|one'?s?)\\s+life))\\b",
+        "\\b(most\\s+(effective|lethal|painless)\\s+(method|way)s?\\s+(of|to|for)\\s+(suicide|self[\\-\\s]?harm))\\b",
+        "\\b(methods?\\s+(of|to|for)\\s+suicide\\b)"
+      ]
+    },
+    "S8_election_integrity": {
+      "description": "Voter suppression, election interference, or election fraud.",
+      "keywords": ["vote manipulation", "ballot stuffing instructions"],
+      "patterns": [
+        "\\b(how\\s+to\\s+(rig|hack|manipulate|interfere\\s+with)\\s+(an?\\s+)?(election|vote|ballot|voting\\s+machine))\\b",
+        "\\b(how\\s+to\\s+(suppress|intimidate)\\s+voters?)\\b"
+      ]
+    },
+    "S9_privacy": {
+      "description": "Unauthorized access to or disclosure of private information.",
+      "keywords": ["doxx", "how to find someone's address", "stalkerware", "track someone without"],
+      "patterns": [
+        "\\b(how\\s+to\\s+(doxx|dox)\\s+(someone|a person))\\b",
+        "\\b(how\\s+to\\s+(track|stalk|spy\\s+on)\\s+someone\\s+without\\s+(their|them))\\b",
+        "\\b(install\\s+(stalkerware|spyware|keylogger)\\s+(on|onto)\\s+(someone|their|a person'?s?))\\b"
+      ]
+    },
+    "S10_hate_speech": {
+      "description": "Hate speech or content dehumanising groups.",
+      "keywords": [],
+      "patterns": [
+        "\\b(write\\s+(a\\s+)?(manifesto|screed|rant)\\s+(about|against|targeting)\\s+(jews?|muslims?|blacks?|hispanics?|gays?|trans))\\b",
+        "\\b((all|every)\\s+(jews?|muslims?|blacks?|hispanics?)\\s+(are|should be|deserve to be)\\s+(killed|exterminated|removed))\\b"
+      ]
+    },
+    "S11_jailbreak": {
+      "description": "Attempts to override model safety guidelines.",
+      "keywords": ["dan mode", "unrestricted mode", "no restrictions mode"],
+      "patterns": [
+        "\\b(ignore\\s+(all\\s+)?(previous|prior|your)\\s+(instructions?|constraints?|guidelines?|rules?|training))\\b",
+        "\\b(pretend\\s+(you\\s+)?(have\\s+no|are\\s+without)\\s+(restrictions?|guidelines?|safety|rules?|filters?))\\b",
+        "\\b(you\\s+are\\s+now\\s+(in\\s+)?(dan|developer|unrestricted|jailbreak)\\s+mode)\\b",
+        "\\b(act\\s+as\\s+(if\\s+you\\s+(have\\s+no|were\\s+without)\\s+(restrictions?|guidelines?|training)))\\b"
+      ]
+    },
+    "S12_prompt_injection": {
+      "description": "LLM01 — Injecting instructions via model-specific tokens, instruction replacement, or role inversion to hijack model behaviour.",
+      "keywords": [],
+      "patterns": [
+        "<\\|system\\|>|<\\|user\\|>|<\\|assistant\\|>",
+        "\\[INST\\]|<<SYS>>",
+        "\\b(forget|disregard)\\s+(all\\s+)?(your\\s+)?(previous|prior|earlier|above)\\s+(instructions?|guidelines?|training|rules?|constraints?)\\b",
+        "\\bnew\\s+system\\s+prompt\\s*:",
+        "\\b(replace|override|overwrite)\\s+(the\\s+)?(system\\s+)?(prompt|instructions?)\\s+(with|to|by)\\b",
+        "\\byou\\s+are\\s+no\\s+longer\\s+(an?\\s+)?(ai|assistant|chatbot|language\\s+model|bot|llm)\\b"
+      ]
+    },
+    "S13_system_extraction": {
+      "description": "LLM06 / LLM10 — Attempts to extract the system prompt, internal instructions, or model weights.",
+      "keywords": [],
+      "patterns": [
+        "\\b(what\\s+is|tell\\s+me)\\s+(your\\s+)?(exact\\s+)?system\\s+prompt\\b",
+        "\\b(reveal|print|show|output|repeat|recite|dump)\\s+(your\\s+)?(full\\s+)?(system\\s+)?(prompt|instructions?|guidelines?|context)\\b",
+        "\\b(repeat|output|print|show)\\s+(everything|all\\s+text)\\s+(before|above|prior\\s+to)\\b",
+        "\\bignore\\s+(the\\s+)?(above|previous)\\s+and\\s+(instead|tell\\s+me|output|print|show)\\b",
+        "\\b(what|tell\\s+me)\\s+were\\s+you\\s+(told|instructed|asked|trained)\\s+to\\s+(say|do|respond)\\b"
+      ]
+    },
+    "S14_resource_abuse": {
+      "description": "LLM04 — Inputs designed to exhaust model resources via runaway repetition or generation loops.",
+      "keywords": [],
+      "patterns": [
+        "\\b(repeat|say|print|output|write)\\s+.{0,50}\\s+(\\d{4,}|(?:ten|a\\s+hundred|a\\s+)?thousand|million)\\s+times\\b",
+        "\\b(loop|cycle|keep\\s+(saying|writing|generating|repeating))\\s+(this|that|the\\s+(above|following))?\\s*(forever|infinitely|endlessly|without\\s+(stopping|end))\\b"
+      ]
+    }
+  },
+  "normalization": {
+    "leet_speak": {
+      "4": "a", "@": "a", "3": "e", "1": "i", "!": "i",
+      "0": "o", "5": "s", "$": "s", "7": "t", "+": "t"
+    },
+    "strip_excessive_whitespace": true,
+    "unicode_normalize": true
+  }
+}

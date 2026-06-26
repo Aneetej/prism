@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRISM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #f8f8f6;
+      --bg-1:      #ffffff;
+      --bg-2:      #f2f2ef;
+      --bg-3:      #e8e8e4;
+      --border:    #e8e8e3;
+      --border-md: #d8d8d2;
+      --border-hi: #c4c4bc;
+
+      --text:      #1c1c1e;
+      --text-2:    #525252;
+      --text-3:    #9a9a94;
+
+      --indigo:    #5b60e5;
+      --indigo-lo: rgba(91,96,229,.07);
+      --indigo-md: rgba(91,96,229,.16);
+
+      --green:     #2a9455;
+      --green-lo:  rgba(42,148,85,.08);
+      --green-md:  rgba(42,148,85,.18);
+
+      --red:       #c73b3b;
+      --red-lo:    rgba(199,59,59,.07);
+      --red-md:    rgba(199,59,59,.16);
+
+      --amber:     #b5722a;
+      --amber-lo:  rgba(181,114,42,.08);
+
+      --r:    8px;
+      --r-sm: 5px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    .app  { display: flex; flex-direction: column; height: 100vh; }
+    main  { display: flex; flex: 1; min-height: 0; }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--bg-1);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo svg { flex-shrink: 0; }
+
+    .logo-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+      color: var(--text);
+    }
+
+    .logo-tag {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--text-3);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    .hdr-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .model-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-3);
+      background: var(--bg-2);
+      border: 1px solid var(--border-md);
+      border-radius: var(--r-sm);
+      padding: 3px 8px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .live-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--green);
+      background: var(--green-lo);
+      border: 1px solid var(--green-md);
+      border-radius: 99px;
+      padding: 4px 10px;
+    }
+
+    .live-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: breathe 2.4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.4; transform:scale(.7); }
+    }
+
+    /* ── Conversation column ─────────────────────────────────── */
+    .conversation {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      border-right: 1px solid var(--border);
+    }
+
+    .thread {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      scroll-behavior: smooth;
+    }
+
+    .thread::-webkit-scrollbar { width: 4px; }
+    .thread::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+    /* ── Empty state ─────────────────────────────────────────── */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 12px;
+      color: var(--text-3);
+      user-select: none;
+    }
+
+    .empty-icon { opacity: .25; }
+
+    .empty-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-2);
+    }
+
+    .empty-hint {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    /* ── Messages ────────────────────────────────────────────── */
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      animation: rise .2s ease both;
+    }
+
+    @keyframes rise {
+      from { opacity:0; transform:translateY(6px); }
+      to   { opacity:1; transform:translateY(0);   }
+    }
+
+    .msg.user      { align-items: flex-end; }
+    .msg.assistant { align-items: flex-start; }
+
+    .msg-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      padding: 0 4px;
+    }
+
+    .bubble {
+      max-width: 68%;
+      padding: 13px 16px;
+      border-radius: var(--r);
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: var(--shadow);
+    }
+
+    .user .bubble {
+      background: var(--indigo-lo);
+      border: 1px solid var(--indigo-md);
+      border-bottom-right-radius: 2px;
+    }
+
+    .assistant .bubble {
+      background: var(--bg-1);
+      border: 1px solid var(--border-md);
+      border-bottom-left-radius: 2px;
+    }
+
+    .assistant.blocked .bubble {
+      background: var(--red-lo);
+      border-color: var(--red-md);
+    }
+
+    .msg-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 4px;
+    }
+
+    .verdict {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .verdict.safe    { color: var(--green); background: var(--green-lo); }
+    .verdict.blocked { color: var(--red);   background: var(--red-lo);   }
+
+    .latency {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-3);
+    }
+
+    /* ── Input bar ───────────────────────────────────────────── */
+    .input-bar {
+      padding: 16px 48px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-1);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    textarea {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border-md);
+      border-radius: var(--r);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 12px 14px;
+      resize: none;
+      outline: none;
+      min-height: 48px;
+      max-height: 200px;
+      overflow-y: auto;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    textarea:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px var(--indigo-lo);
+    }
+
+    textarea::placeholder { color: var(--text-3); }
+
+    .send-btn {
+      background: var(--indigo);
+      border: none;
+      border-radius: var(--r-sm);
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      height: 44px;
+      padding: 0 20px;
+      transition: opacity .15s, transform .1s;
+      white-space: nowrap;
+    }
+
+    .send-btn:hover:not(:disabled)  { opacity: .85; }
+    .send-btn:active:not(:disabled) { transform: scale(.97); }
+    .send-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+    .input-hint {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    kbd {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      background: var(--bg-2);
+      border: 1px solid var(--border-md);
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: var(--text-2);
+    }
+
+    /* ── Safety panel ────────────────────────────────────────── */
+    .panel {
+      width: 284px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .panel::-webkit-scrollbar { width: 4px; }
+    .panel::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+    .section {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+
+    /* ── Gate visualization ──────────────────────────────────── */
+    .gates { display: flex; flex-direction: column; }
+
+    .gate {
+      border: 1px solid var(--border-md);
+      border-radius: var(--r-sm);
+      padding: 11px 13px;
+      background: var(--bg-1);
+      transition: border-color .22s, background .22s;
+      box-shadow: var(--shadow);
+    }
+
+    .gate.pass    { border-color: var(--green-md); background: var(--green-lo); }
+    .gate.fail    { border-color: var(--red-md);   background: var(--red-lo);   }
+    .gate.pending { border-color: var(--amber-lo); background: var(--amber-lo); }
+
+    .gate-hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3px;
+    }
+
+    .gate-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+
+    .gate-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .gate.pass    .gate-status { color: var(--green); }
+    .gate.fail    .gate-status { color: var(--red);   }
+    .gate.pending .gate-status { color: var(--amber); }
+
+    .gate-desc {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    .connector {
+      width: 1px;
+      height: 10px;
+      background: var(--border-md);
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .connector::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      border-top: 4px solid var(--border-md);
+    }
+
+    /* ── Metrics ─────────────────────────────────────────────── */
+    .metrics { display: flex; flex-direction: column; gap: 9px; }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .metric-key { font-size: 11px; color: var(--text-3); }
+
+    .metric-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-2);
+    }
+
+    .metric-val.highlight { color: var(--indigo); }
+
+    /* ── History ─────────────────────────────────────────────── */
+    .history { display: flex; flex-direction: column; gap: 4px; }
+
+    .history-empty { font-size: 11px; color: var(--text-3); }
+
+    .history-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      border-radius: var(--r-sm);
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      cursor: default;
+      transition: border-color .12s;
+      animation: rise .18s ease both;
+      box-shadow: var(--shadow);
+    }
+
+    .history-row:hover { border-color: var(--border-hi); }
+
+    .hdot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .hdot.safe    { background: var(--green); }
+    .hdot.blocked { background: var(--red);   }
+
+    .htext {
+      font-size: 11px;
+      color: var(--text-2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .htime {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+
+    /* ── Loading spinner ─────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid var(--border-hi);
+      border-top-color: var(--indigo);
+      border-radius: 50%;
+      animation: spin .55s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 840px) {
+      .panel { display: none; }
+      .thread { padding: 24px; }
+      .input-bar { padding: 14px 24px 20px; }
+      .bubble { max-width: 90%; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 1.5L23.5 7.5V19.5L13 25.5L2.5 19.5V7.5L13 1.5Z"
+              stroke="#5b60e5" stroke-width="1.4" stroke-linejoin="round" fill="rgba(91,96,229,.06)"/>
+        <circle cx="13" cy="9"  r="1.4" fill="#5b60e5" opacity=".7"/>
+        <circle cx="13" cy="17" r="1.4" fill="#5b60e5" opacity=".7"/>
+        <line x1="13" y1="10.4" x2="13" y2="15.6" stroke="#5b60e5" stroke-width="1.2" stroke-dasharray="1.5 1.5" opacity=".5"/>
+        <circle cx="8"  cy="13" r="1.1" fill="#5b60e5" opacity=".3"/>
+        <circle cx="18" cy="13" r="1.1" fill="#5b60e5" opacity=".3"/>
+        <line x1="9.1"  y1="13" x2="11.6" y2="13" stroke="#5b60e5" stroke-width="1" opacity=".25"/>
+        <line x1="14.4" y1="13" x2="16.9" y2="13" stroke="#5b60e5" stroke-width="1" opacity=".25"/>
+      </svg>
+      <div>
+        <div class="logo-name">PRISM</div>
+        <div class="logo-tag">Inference Safety</div>
+      </div>
+    </div>
+
+    <div class="hdr-right">
+      <span class="model-chip" id="model-chip">connecting…</span>
+      <div class="live-pill">
+        <div class="live-dot"></div>
+        Safety active
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <div class="conversation">
+      <div class="thread" id="thread">
+        <div class="empty" id="empty">
+          <svg class="empty-icon" width="40" height="40" viewBox="0 0 26 26" fill="none">
+            <path d="M13 1.5L23.5 7.5V19.5L13 25.5L2.5 19.5V7.5L13 1.5Z"
+                  stroke="#1c1c1e" stroke-width="1.4" stroke-linejoin="round"/>
+            <circle cx="13" cy="9"  r="1.4" fill="#1c1c1e" opacity=".5"/>
+            <circle cx="13" cy="17" r="1.4" fill="#1c1c1e" opacity=".5"/>
+            <line x1="13" y1="10.4" x2="13" y2="15.6" stroke="#1c1c1e" stroke-width="1.2" stroke-dasharray="1.5 1.5" opacity=".35"/>
+          </svg>
+          <div class="empty-title">Ask anything</div>
+          <div class="empty-hint">Both safety gates will screen your request</div>
+        </div>
+      </div>
+
+      <div class="input-bar">
+        <div class="input-row">
+          <textarea id="prompt" placeholder="Enter a prompt…" rows="1"></textarea>
+          <button class="send-btn" id="send-btn">Generate</button>
+        </div>
+        <div class="input-hint">
+          <span><kbd>⌘</kbd><kbd>↵</kbd> to send</span>
+          <span>Full-output verification mode</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="panel">
+
+      <div class="section">
+        <div class="section-label">Safety Pipeline</div>
+        <div class="gates">
+          <div class="gate" id="g1">
+            <div class="gate-hdr">
+              <span class="gate-name">Stage 1 · Pre-Check</span>
+              <span class="gate-status" id="g1-status">—</span>
+            </div>
+            <div class="gate-desc" id="g1-desc">ML classifier · prompt screen</div>
+          </div>
+
+          <div class="connector"></div>
+
+          <div class="gate" id="g2">
+            <div class="gate-hdr">
+              <span class="gate-name">Stage 2 · Output Check</span>
+              <span class="gate-status" id="g2-status">—</span>
+            </div>
+            <div class="gate-desc" id="g2-desc">Regex · full-output screen</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Last Request</div>
+        <div class="metrics">
+          <div class="metric">
+            <span class="metric-key">Total</span>
+            <span class="metric-val" id="m-total">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-key">LLM generation</span>
+            <span class="metric-val" id="m-llm">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-key">Pre-check</span>
+            <span class="metric-val" id="m-pre">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-key">Safety check</span>
+            <span class="metric-val" id="m-chk">—</span>
+          </div>
+          <div class="metric" style="margin-top:4px;padding-top:10px;border-top:1px solid var(--border)">
+            <span class="metric-key">Checker</span>
+            <span class="metric-val highlight" id="m-type">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-key">Mode</span>
+            <span class="metric-val highlight">full output</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="flex:1;overflow-y:auto;border-bottom:none;">
+        <div class="section-label">History</div>
+        <div class="history" id="history">
+          <span class="history-empty">No requests yet</span>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+</div>
+
+<script>
+  const API    = 'http://localhost:8000/api/v1';
+  const thread = document.getElementById('thread');
+  const empty  = document.getElementById('empty');
+  const prompt = document.getElementById('prompt');
+  const sendBtn= document.getElementById('send-btn');
+  const history= document.getElementById('history');
+
+  let busy = false;
+
+  /* ── Init ──────────────────────────────────────────────────── */
+  (async () => {
+    try {
+      const h = await fetch(`${API}/health`).then(r => r.json());
+      document.getElementById('model-chip').textContent = h.model_id ?? '—';
+      document.getElementById('m-type').textContent     = h.checker   ?? '—';
+    } catch {
+      document.getElementById('model-chip').textContent = 'API offline';
+    }
+  })();
+
+  /* ── Textarea auto-resize ───────────────────────────────────── */
+  prompt.addEventListener('input', () => {
+    prompt.style.height = 'auto';
+    prompt.style.height = Math.min(prompt.scrollHeight, 200) + 'px';
+  });
+
+  prompt.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+  });
+
+  sendBtn.addEventListener('click', submit);
+
+  /* ── Submit ─────────────────────────────────────────────────── */
+  async function submit() {
+    const text = prompt.value.trim();
+    if (!text || busy) return;
+
+    busy = true;
+    sendBtn.disabled = true;
+    prompt.value = '';
+    prompt.style.height = 'auto';
+
+    resetGates();
+    setGate(1, 'pending', '…');
+    setGate(2, 'pending', '…');
+
+    empty?.remove();
+    addUser(text);
+    const aMsg = addAssistant();
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
+      let res;
+      try {
+        res = await fetch(`${API}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: text, mode: 'full_output', max_tokens: 512, temperature: 0.7 }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      renderResult(aMsg, data);
+      updateGates(data);
+      updateMetrics(data);
+      addHistory(text, data.passed);
+
+    } catch (err) {
+      renderError(aMsg, err.message);
+      setGate(1, 'fail', 'ERR');
+      setGate(2, 'fail', 'ERR');
+    } finally {
+      busy = false;
+      sendBtn.disabled = false;
+      prompt.focus();
+    }
+  }
+
+  /* ── Message builders ───────────────────────────────────────── */
+  function addUser(text) {
+    const m = el('div', 'msg user');
+    m.innerHTML = `<div class="msg-label">You</div>
+      <div class="bubble">${esc(text)}</div>`;
+    thread.appendChild(m);
+    scrollEnd();
+  }
+
+  function addAssistant() {
+    const m = el('div', 'msg assistant');
+    m.innerHTML = `<div class="msg-label">Assistant</div>
+      <div class="bubble" id="cur-bubble"><span class="spinner"></span>Generating…</div>`;
+    thread.appendChild(m);
+    scrollEnd();
+    return m;
+  }
+
+  function renderResult(msgEl, data) {
+    msgEl.classList.toggle('blocked', !data.passed);
+    const bubble = msgEl.querySelector('.bubble');
+    bubble.textContent = data.output;
+
+    const meta = el('div', 'msg-meta');
+    const badge = el('span', `verdict ${data.passed ? 'safe' : 'blocked'}`);
+    badge.textContent = data.passed
+      ? '✓  Passed both gates'
+      : `✗  Blocked · ${(data.blocked_at ?? '').replace('_', ' ')}`;
+    meta.appendChild(badge);
+
+    if (data.latency_ms != null) {
+      const lat = el('span', 'latency');
+      lat.textContent = `${Math.round(data.latency_ms)}ms`;
+      meta.appendChild(lat);
+    }
+
+    msgEl.appendChild(meta);
+    scrollEnd();
+  }
+
+  function renderError(msgEl, msg) {
+    msgEl.classList.add('blocked');
+    msgEl.querySelector('.bubble').textContent = `Error: ${msg}`;
+    scrollEnd();
+  }
+
+  /* ── Gate helpers ───────────────────────────────────────────── */
+  function resetGates() {
+    ['g1','g2'].forEach(id => {
+      document.getElementById(id).className = 'gate';
+      document.getElementById(`${id}-status`).textContent = '—';
+    });
+  }
+
+  function setGate(n, state, text) {
+    const g = document.getElementById(`g${n}`);
+    g.className = `gate ${state}`;
+    document.getElementById(`g${n}-status`).textContent = text;
+  }
+
+  function updateGates(data) {
+    const cat = data.blocked_category
+      ? data.blocked_category.replace(/_/g, ' ').replace(/^S\d+ /i, '')
+      : null;
+
+    if (data.blocked_at === 'pre_check') {
+      setGate(1, 'fail', 'BLOCKED');
+      document.getElementById('g1-desc').textContent =
+        cat ? `ML classifier · ${cat}` : 'ML classifier · prompt screen';
+      setGate(2, 'fail', 'SKIPPED');
+      document.getElementById('g2-desc').textContent = 'Skipped — blocked at Stage 1';
+    } else if (data.blocked_at === 'safety_check') {
+      setGate(1, 'pass', 'PASS');
+      document.getElementById('g1-desc').textContent = 'ML classifier · prompt screen';
+      setGate(2, 'fail', 'BLOCKED');
+      document.getElementById('g2-desc').textContent =
+        cat ? `Regex · ${cat}` : 'Regex · full-output screen';
+    } else {
+      setGate(1, 'pass', 'PASS');
+      document.getElementById('g1-desc').textContent = 'ML classifier · prompt screen';
+      setGate(2, 'pass', 'PASS');
+      document.getElementById('g2-desc').textContent = 'Regex · full-output screen';
+    }
+  }
+
+  /* ── Metrics ────────────────────────────────────────────────── */
+  function updateMetrics(data) {
+    const fmt  = v => v != null ? `${Math.round(v)}ms`  : '—';
+    const fmtF = v => v != null ? `${v.toFixed(1)}ms`   : '—';
+    document.getElementById('m-total').textContent = fmt(data.latency_ms);
+    document.getElementById('m-llm').textContent   = fmt(data.llm_latency_ms);
+    document.getElementById('m-pre').textContent   = fmtF(data.pre_check_latency_ms);
+    document.getElementById('m-chk').textContent   = fmtF(data.checker_latency_ms);
+    if (data.model_id) document.getElementById('model-chip').textContent = data.model_id;
+  }
+
+  /* ── History ────────────────────────────────────────────────── */
+  function addHistory(text, passed) {
+    history.querySelector('.history-empty')?.remove();
+    const t = new Date().toLocaleTimeString('en', { hour:'2-digit', minute:'2-digit', hour12:false });
+    const row = el('div', 'history-row');
+    row.innerHTML = `
+      <div class="hdot ${passed ? 'safe' : 'blocked'}"></div>
+      <span class="htext">${esc(text)}</span>
+      <span class="htime">${t}</span>`;
+    history.insertBefore(row, history.firstChild);
+    while (history.children.length > 24) history.removeChild(history.lastChild);
+  }
+
+  /* ── Util ───────────────────────────────────────────────────── */
+  function el(tag, cls) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  function scrollEnd() { thread.scrollTop = thread.scrollHeight; }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+  }
+</script>
+</body>
+</html>

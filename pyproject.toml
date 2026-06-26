@@ -1,0 +1,6 @@
+[project]
+name = "prism"
+version = "0.1.0"
+description = "Pre/post-inference Runtime Inference Safety Monitor — LLM-agnostic two-stage safety layer"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }

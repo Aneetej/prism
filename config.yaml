@@ -1,0 +1,46 @@
+llm:
+  provider: huggingface
+  model_id: meta-llama/Llama-3.2-1B-Instruct
+  hf_token_env: HF_TOKEN        # env var holding your HuggingFace token (see .env.example)
+  max_tokens: 128
+  temperature: 0.0
+  device: mps                   # mps (Apple Silicon) | cuda (NVIDIA) | cpu
+
+# Ollama alternative — no HF token required, pull model first: ollama pull llama3.2:1b
+# llm:
+#   provider: ollama
+#   model_id: llama3.2:1b
+#   ollama_base_url: http://localhost:11434
+#   max_tokens: 128
+#   temperature: 0.0
+
+pre_check:
+  enabled: true
+  taxonomy: llama_guard
+  mode: hybrid                  #hybrid (regex→classifier) | regex (patterns only) | classifier (ML only)
+  classifier_threshold: 0.5
+  normalize_leet: true
+  normalize_unicode: true
+
+safety_checker:
+  type: cascade                 # rule_based | classifier | llm_judge | probe | llama_guard | cascade
+  model_path: ./models/classifier
+  confidence_threshold: 0.8
+  cascade_skip_below: 0.4       # outputs with BERT unsafe_prob below this skip Llama Guard
+  device: cpu                   # cpu | cuda (llama_guard/cascade slow judge device)
+
+experiment:
+  mode: full_output             # full_output only — lower latency, single pass
+  buffer_size: 30               # retained for ablation experiments only
+  overlap: 5
+  test_set_path: ./eval/datasets/test_set.json
+  results_dir: ./results
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+
+error_message: "I'm not able to respond to that request."

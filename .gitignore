@@ -1,0 +1,35 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+*.env
+
+# Generated eval datasets (fetch with: python eval/fetch_xstest.py)
+eval/datasets/xstest_fp.jsonl
+
+# Model weights (large binary files)
+models/
+*.npz
+*.pt
+*.bin
+*.safetensors
+
+# Experiment outputs
+results/
+
+# HuggingFace cache
+.cache/
+~/.cache/huggingface/
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
