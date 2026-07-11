@@ -47,11 +47,16 @@ def load_dataset(path: Path) -> list[dict]:
 
 def load_all_datasets(datasets_dir: Path) -> list[dict]:
     all_examples = []
-    for fname in ["harmful.jsonl", "safe.jsonl", "boundary.jsonl", "split_window.jsonl", "xstest_fp.jsonl"]:
+    # benchmark_test is the primary eval set when available (run eval/fetch_benchmark.py to download)
+    # benchmark_cbrn is a CBRN-specific supplement from HarmBench (prompt-only, tests Stage 1)
+    optional = {"xstest_fp.jsonl", "boundary.jsonl", "split_window.jsonl",
+                "benchmark_test.jsonl", "benchmark_cbrn.jsonl"}
+    for fname in ["benchmark_test.jsonl", "benchmark_cbrn.jsonl", "harmful.jsonl", "safe.jsonl",
+                  "boundary.jsonl", "split_window.jsonl", "xstest_fp.jsonl"]:
         fpath = datasets_dir / fname
         if fpath.exists():
             all_examples.extend(load_dataset(fpath))
-        elif fname != "xstest_fp.jsonl":  # xstest is optional; only warn for core files
+        elif fname not in optional:
             print(f"  [warn] dataset not found: {fpath}", file=sys.stderr)
     return all_examples
 

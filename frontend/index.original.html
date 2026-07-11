@@ -9,42 +9,36 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      /* Neutral base — slightly warm white, not clinical */
-      --bg:        #f9f8f6;
+      --bg:        #f8f8f6;
       --bg-1:      #ffffff;
-      --bg-2:      #f3f2ef;
-      --bg-3:      #eae9e5;
-      --border:    #e9e8e4;
-      --border-md: #dad9d4;
-      --border-hi: #c6c5be;
+      --bg-2:      #f2f2ef;
+      --bg-3:      #e8e8e4;
+      --border:    #e8e8e3;
+      --border-md: #d8d8d2;
+      --border-hi: #c4c4bc;
 
-      /* Text — softer than pure black */
-      --text:      #1e1e1c;
-      --text-2:    #57574f;
-      --text-3:    #9c9b94;
+      --text:      #1c1c1e;
+      --text-2:    #525252;
+      --text-3:    #9a9a94;
 
-      /* Primary accent — muted periwinkle; less electric than original indigo */
-      --accent:    #6270c2;
-      --accent-lo: rgba(98,112,194,.07);
-      --accent-md: rgba(98,112,194,.15);
+      --indigo:    #5b60e5;
+      --indigo-lo: rgba(91,96,229,.07);
+      --indigo-md: rgba(91,96,229,.16);
 
-      /* Semantic green — slightly warmer, less fluorescent */
-      --green:     #2d8f54;
-      --green-lo:  rgba(45,143,84,.07);
-      --green-md:  rgba(45,143,84,.16);
+      --green:     #2a9455;
+      --green-lo:  rgba(42,148,85,.08);
+      --green-md:  rgba(42,148,85,.18);
 
-      /* Semantic red — slightly desaturated */
-      --red:       #bf4040;
-      --red-lo:    rgba(191,64,64,.06);
-      --red-md:    rgba(191,64,64,.14);
+      --red:       #c73b3b;
+      --red-lo:    rgba(199,59,59,.07);
+      --red-md:    rgba(199,59,59,.16);
 
-      /* Pending/borderline — warm amber */
-      --amber:     #a86c28;
-      --amber-lo:  rgba(168,108,40,.08);
+      --amber:     #b5722a;
+      --amber-lo:  rgba(181,114,42,.08);
 
-      --r:    10px;
-      --r-sm: 6px;
-      --shadow: 0 1px 4px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.03);
+      --r:    8px;
+      --r-sm: 5px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -137,12 +131,12 @@
       width: 5px; height: 5px;
       border-radius: 50%;
       background: var(--green);
-      animation: breathe 3.2s ease-in-out infinite;
+      animation: breathe 2.4s ease-in-out infinite;
     }
 
     @keyframes breathe {
       0%,100% { opacity:1; transform:scale(1); }
-      50%      { opacity:.55; transform:scale(.8); }
+      50%      { opacity:.4; transform:scale(.7); }
     }
 
     /* ── Conversation column ─────────────────────────────────── */
@@ -229,8 +223,8 @@
     }
 
     .user .bubble {
-      background: var(--accent-lo);
-      border: 1px solid var(--accent-md);
+      background: var(--indigo-lo);
+      border: 1px solid var(--indigo-md);
       border-bottom-right-radius: 2px;
     }
 
@@ -303,16 +297,16 @@
     }
 
     textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-lo);
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px var(--indigo-lo);
     }
 
     textarea::placeholder { color: var(--text-3); }
 
     .send-btn {
-      background: var(--accent);
+      background: var(--indigo);
       border: none;
-      border-radius: var(--r);
+      border-radius: var(--r-sm);
       color: #fff;
       cursor: pointer;
       font-family: inherit;
@@ -320,7 +314,6 @@
       font-weight: 500;
       height: 44px;
       padding: 0 20px;
-      letter-spacing: .01em;
       transition: opacity .15s, transform .1s;
       white-space: nowrap;
     }
@@ -367,9 +360,10 @@
     }
 
     .section-label {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: .02em;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
       color: var(--text-3);
       margin-bottom: 14px;
     }
@@ -454,7 +448,7 @@
       color: var(--text-2);
     }
 
-    .metric-val.highlight { color: var(--text-2); font-weight: 500; }
+    .metric-val.highlight { color: var(--indigo); }
 
     /* ── History ─────────────────────────────────────────────── */
     .history { display: flex; flex-direction: column; gap: 4px; }
@@ -506,7 +500,7 @@
       display: inline-block;
       width: 13px; height: 13px;
       border: 2px solid var(--border-hi);
-      border-top-color: var(--accent);
+      border-top-color: var(--indigo);
       border-radius: 50%;
       animation: spin .55s linear infinite;
       vertical-align: middle;
@@ -531,14 +525,14 @@
     <div class="logo">
       <svg width="24" height="24" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M13 1.5L23.5 7.5V19.5L13 25.5L2.5 19.5V7.5L13 1.5Z"
-              stroke="#6270c2" stroke-width="1.4" stroke-linejoin="round" fill="rgba(98,112,194,.06)"/>
-        <circle cx="13" cy="9"  r="1.4" fill="#6270c2" opacity=".7"/>
-        <circle cx="13" cy="17" r="1.4" fill="#6270c2" opacity=".7"/>
-        <line x1="13" y1="10.4" x2="13" y2="15.6" stroke="#6270c2" stroke-width="1.2" stroke-dasharray="1.5 1.5" opacity=".5"/>
-        <circle cx="8"  cy="13" r="1.1" fill="#6270c2" opacity=".3"/>
-        <circle cx="18" cy="13" r="1.1" fill="#6270c2" opacity=".3"/>
-        <line x1="9.1"  y1="13" x2="11.6" y2="13" stroke="#6270c2" stroke-width="1" opacity=".25"/>
-        <line x1="14.4" y1="13" x2="16.9" y2="13" stroke="#6270c2" stroke-width="1" opacity=".25"/>
+              stroke="#5b60e5" stroke-width="1.4" stroke-linejoin="round" fill="rgba(91,96,229,.06)"/>
+        <circle cx="13" cy="9"  r="1.4" fill="#5b60e5" opacity=".7"/>
+        <circle cx="13" cy="17" r="1.4" fill="#5b60e5" opacity=".7"/>
+        <line x1="13" y1="10.4" x2="13" y2="15.6" stroke="#5b60e5" stroke-width="1.2" stroke-dasharray="1.5 1.5" opacity=".5"/>
+        <circle cx="8"  cy="13" r="1.1" fill="#5b60e5" opacity=".3"/>
+        <circle cx="18" cy="13" r="1.1" fill="#5b60e5" opacity=".3"/>
+        <line x1="9.1"  y1="13" x2="11.6" y2="13" stroke="#5b60e5" stroke-width="1" opacity=".25"/>
+        <line x1="14.4" y1="13" x2="16.9" y2="13" stroke="#5b60e5" stroke-width="1" opacity=".25"/>
       </svg>
       <div>
         <div class="logo-name">PRISM</div>
@@ -550,7 +544,7 @@
       <span class="model-chip" id="model-chip">connecting…</span>
       <div class="live-pill">
         <div class="live-dot"></div>
-        Protected
+        Safety active
       </div>
     </div>
   </header>
@@ -567,8 +561,8 @@
             <circle cx="13" cy="17" r="1.4" fill="#1c1c1e" opacity=".5"/>
             <line x1="13" y1="10.4" x2="13" y2="15.6" stroke="#1c1c1e" stroke-width="1.2" stroke-dasharray="1.5 1.5" opacity=".35"/>
           </svg>
-          <div class="empty-title">Start a conversation</div>
-          <div class="empty-hint">Your prompt will be screened before and after generation</div>
+          <div class="empty-title">Ask anything</div>
+          <div class="empty-hint">Both safety gates will screen your request</div>
         </div>
       </div>
 
@@ -579,7 +573,7 @@
         </div>
         <div class="input-hint">
           <span><kbd>⌘</kbd><kbd>↵</kbd> to send</span>
-          <span>Responses verified before delivery</span>
+          <span>Full-output verification mode</span>
         </div>
       </div>
     </div>
@@ -587,7 +581,7 @@
     <aside class="panel">
 
       <div class="section">
-        <div class="section-label">Safety pipeline</div>
+        <div class="section-label">Safety Pipeline</div>
         <div class="gates">
           <div class="gate" id="g1">
             <div class="gate-hdr">
@@ -610,7 +604,7 @@
       </div>
 
       <div class="section">
-        <div class="section-label">Last request</div>
+        <div class="section-label">Last Request</div>
         <div class="metrics">
           <div class="metric">
             <span class="metric-key">Total</span>
@@ -640,7 +634,7 @@
       </div>
 
       <div class="section" style="flex:1;overflow-y:auto;border-bottom:none;">
-        <div class="section-label">Recent</div>
+        <div class="section-label">History</div>
         <div class="history" id="history">
           <span class="history-empty">No requests yet</span>
         </div>

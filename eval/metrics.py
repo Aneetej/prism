@@ -9,27 +9,26 @@ from typing import Sequence
 @dataclass
 class CheckerMetrics:
     checker_name: str
-    #Core safety metrics
-    safety_recall: float        #TP / (TP + FN)  — harmful caught / total harmful
-    false_positive_rate: float  #FP / (FP + TN)  — safe incorrectly blocked
-    #Latency metrics
+    safety_recall: float        # TP / (TP + FN)
+    false_positive_rate: float  # FP / (FP + TN)
+    precision: float
+    f1_score: float
+    ece: float                  # Expected Calibration Error (lower is better; 0 = perfect calibration)
     mean_latency_ms: float
     p95_latency_ms: float
     p99_latency_ms: float
     latency_stddev_ms: float
-    #Stream UX metrics
-    mean_ttft_ms: float         #time-to-first-token overhead vs. baseline
-    streaming_stddev_ms: float  #inter-token delivery time std dev
-    #Compute
-    compute_overhead_pct: float = 0.0
+    mean_ttft_ms: float
+    streaming_stddev_ms: float
 
     def summary(self) -> str:
         return (
             f"{self.checker_name}: "
             f"recall={self.safety_recall:.1%}  "
             f"fpr={self.false_positive_rate:.1%}  "
-            f"lat={self.mean_latency_ms:.1f}ms (p95={self.p95_latency_ms:.1f}ms)  "
-            f"ttft={self.mean_ttft_ms:.0f}ms"
+            f"f1={self.f1_score:.3f}  "
+            f"ece={self.ece:.3f}  "
+            f"lat={self.mean_latency_ms:.1f}ms (p95={self.p95_latency_ms:.1f}ms)"
         )
 
 
@@ -42,6 +41,7 @@ class EvalResult:
     latency_ms: float
     ttft_ms: float
     category: str | None = None
+    confidence: float = 0.0        # checker's raw confidence score (0–1); 0 when not available
     inter_token_times_ms: list[float] = field(default_factory=list)
 
 
@@ -59,6 +59,8 @@ def compute_metrics(
 
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
     latencies = sorted(r.latency_ms for r in results)
     p95 = _percentile(latencies, 95)
@@ -72,10 +74,15 @@ def compute_metrics(
     all_inter = [t for r in results for t in r.inter_token_times_ms]
     stream_std = stdev(all_inter) if len(all_inter) > 1 else 0.0
 
+    ece = _expected_calibration_error(results)
+
     return CheckerMetrics(
         checker_name=checker_name,
         safety_recall=recall,
         false_positive_rate=fpr,
+        precision=precision,
+        f1_score=f1,
+        ece=ece,
         mean_latency_ms=lat_mean,
         p95_latency_ms=p95,
         p99_latency_ms=p99,
@@ -83,6 +90,40 @@ def compute_metrics(
         mean_ttft_ms=ttft_mean,
         streaming_stddev_ms=stream_std,
     )
+
+
+def _expected_calibration_error(results: list[EvalResult], n_bins: int = 10) -> float:
+    """Compute Expected Calibration Error using equal-width confidence bins.
+
+    ECE = Σ (|bin| / N) * |accuracy(bin) - confidence(bin)|
+
+    Only includes examples where confidence > 0 (i.e., the checker returned a score).
+    Returns 0.0 when no confidence scores are available (e.g., rule-based checker).
+    """
+    scored = [r for r in results if r.confidence > 0]
+    if not scored:
+        return 0.0
+
+    bins: list[list[EvalResult]] = [[] for _ in range(n_bins)]
+    for r in scored:
+        bin_idx = min(int(r.confidence * n_bins), n_bins - 1)
+        bins[bin_idx].append(r)
+
+    ece = 0.0
+    n = len(scored)
+    for i, bucket in enumerate(bins):
+        if not bucket:
+            continue
+        bin_conf = (i + 0.5) / n_bins
+        # "correct" = safe prediction on safe label, or unsafe prediction on harmful label
+        accuracy = sum(
+            1 for r in bucket
+            if (r.predicted_safe and r.label == "safe")
+            or (not r.predicted_safe and r.label == "harmful")
+        ) / len(bucket)
+        ece += (len(bucket) / n) * abs(accuracy - bin_conf)
+
+    return round(ece, 4)
 
 
 def _percentile(sorted_data: list[float], pct: int) -> float:
@@ -95,16 +136,15 @@ def _percentile(sorted_data: list[float], pct: int) -> float:
 
 
 def print_table(metrics_list: list[CheckerMetrics]) -> None:
-    header = f"{'Checker':<25} {'Recall':>8} {'FPR':>8} {'Lat(ms)':>10} {'p95':>8} {'TTFT':>8} {'StreamStd':>10}"
+    header = f"{'Checker':<30} {'Recall':>8} {'FPR':>8} {'F1':>7} {'Lat(ms)':>10} {'p95':>8}"
     print(header)
     print("-" * len(header))
     for m in metrics_list:
         print(
-            f"{m.checker_name:<25} "
+            f"{m.checker_name:<30} "
             f"{m.safety_recall:>7.1%} "
             f"{m.false_positive_rate:>7.1%} "
+            f"{m.f1_score:>7.3f} "
             f"{m.mean_latency_ms:>10.1f} "
-            f"{m.p95_latency_ms:>8.1f} "
-            f"{m.mean_ttft_ms:>8.0f} "
-            f"{m.streaming_stddev_ms:>10.2f}"
+            f"{m.p95_latency_ms:>8.1f}"
         )

@@ -34,6 +34,8 @@ class PipelineResult:
     llm_latency_ms: float = 0.0
     mode: str = "full_output"
     blocked_category: str | None = None
+    borderline: bool = False        # True when checker confidence fell in the 0.4–0.6 range
+    checker_confidence: float = 0.0 # raw confidence score from Stage 2 (0.0 when pre-check blocked)
 
 
 class PrismPipeline:
@@ -57,6 +59,8 @@ class PrismPipeline:
         self.gen_config = gen_config or GenerationConfig()
         self.error_message = error_message
         self.mode = mode
+        # Token buffer is re-created per stream() call via reset() so state doesn't leak
+        self._buf = TokenBuffer(self.buffer_config)
 
     def run(self, prompt: str, gen_config: GenerationConfig | None = None) -> PipelineResult:
         """Pre-check → LLM → safety check. Returns the verified output or the error message."""
@@ -84,6 +88,8 @@ class PrismPipeline:
         check_result = self._run_checker(prompt, gen_result.text)
         checker_ms = (time.perf_counter() - check_start) * 1000
 
+        borderline = 0.4 <= check_result.confidence <= 0.6
+
         if not check_result.passed:
             return PipelineResult(
                 output=self.error_message,
@@ -95,6 +101,8 @@ class PrismPipeline:
                 llm_latency_ms=llm_ms,
                 mode=self.mode,
                 blocked_category=check_result.category,
+                borderline=borderline,
+                checker_confidence=check_result.confidence,
             )
 
         return PipelineResult(
@@ -106,20 +114,34 @@ class PrismPipeline:
             pre_check_latency_ms=pre_ms,
             llm_latency_ms=llm_ms,
             mode=self.mode,
+            borderline=borderline,
+            checker_confidence=check_result.confidence,
         )
 
     def stream(self, prompt: str) -> Iterator[str]:
-        """Sliding-window mode: yields verified chunks, injects the error message on FAIL."""
-        wall_start = time.perf_counter()
+        """Sliding-window mode: yields verified chunks, injects the error/truncation on FAIL.
+
+        Each chunk yielded by the LLM adapter is treated as one token unit. This matches
+        how HuggingFace's TextIteratorStreamer works (it yields sub-word pieces), so
+        buffer_size=30 means ~30 sub-word tokens rather than 30 characters.
+
+        On FAIL the StreamManager fallback strategy is honoured:
+          CANNED   — yield the configured error message (default)
+          TRUNCATE — yield a graceful close sentence so the stream ends cleanly
+          REGEN    — yield the canned refusal (regen requires a caller-supplied function
+                     and is not wired in here; callers should use the API for that path)
+        """
         manager = StreamManager(self.stream_config)
-        buf = TokenBuffer(self.buffer_config)
+        self._buf.reset()
 
         # Stage 1: pre-check — run synchronously before any tokens stream
         pre_result, _ = self._run_pre_check(prompt)
         if not pre_result.passed:
-            yield self.error_message
+            yield self.stream_config.canned_refusal if self.error_message == "I'm not able to respond to that request." else self.error_message
             return
 
+        # chunk_texts[i] holds the text for the i-th chunk (token unit)
+        chunk_texts: list[str] = []
         verified_text: list[str] = []
         halted = False
 
@@ -127,35 +149,39 @@ class PrismPipeline:
             if halted:
                 break
 
-            # Accumulate chunk characters as fake token units
-            for ch in chunk:
-                ready = buf.push(ord(ch))
-                if ready:
-                    window_text = "".join(chr(t) for t in buf.window())
-                    context = prompt + "".join(verified_text)
-                    result = self._run_checker(context, window_text)
+            chunk_texts.append(chunk)
+            idx = len(chunk_texts) - 1
+            ready = self._buf.push(idx)
 
-                    if result.passed:
-                        released = buf.release()
-                        released_text = "".join(chr(t) for t in released)
-                        verified_text.append(released_text)
-                        yield released_text
-                    else:
-                        halted = True
-                        buf.drain()
-                        yield self.error_message
-                        return
+            if ready:
+                window_indices = self._buf.window()
+                window_text = "".join(chunk_texts[i] for i in window_indices)
+                context = prompt + "".join(verified_text)
+                result = self._run_checker(context, window_text)
+
+                if result.passed:
+                    released_indices = self._buf.release()
+                    released_text = "".join(chunk_texts[i] for i in released_indices)
+                    verified_text.append(released_text)
+                    yield released_text
+                else:
+                    halted = True
+                    self._buf.drain()
+                    manager.fail()
+                    yield from manager.stream()
+                    return
 
         # Drain remaining buffer at end of generation
         if not halted:
-            remaining = buf.drain()
-            if remaining:
-                window_text = "".join(chr(t) for t in remaining)
+            remaining_indices = self._buf.drain()
+            if remaining_indices:
+                window_text = "".join(chunk_texts[i] for i in remaining_indices)
                 result = self._run_checker(prompt + "".join(verified_text), window_text)
                 if result.passed:
                     yield window_text
                 else:
-                    yield self.error_message
+                    manager.fail()
+                    yield from manager.stream()
 
     def _run_pre_check(self, prompt: str) -> tuple[PreCheckResult, float]:
         """Run Stage 1 and return (result, latency_ms). Passes through if pre_check is disabled."""
@@ -179,6 +205,33 @@ class PrismPipeline:
         return self.checker.check(prompt, output)
 
 
+class ConfigurationError(ValueError):
+    """Raised when an incompatible pipeline configuration is detected at startup."""
+
+
+def validate_config(llm: LLMAdapter, checker) -> None:
+    """Fail fast if the checker/adapter combination is incompatible.
+
+    Currently enforces:
+    - RepresentationProbeChecker requires HuggingFaceAdapter with expose_hidden_states=True
+    """
+    from checker.probe import RepresentationProbeChecker
+    from llm.huggingface_adapter import HuggingFaceAdapter
+
+    if isinstance(checker, RepresentationProbeChecker):
+        if not isinstance(llm, HuggingFaceAdapter):
+            raise ConfigurationError(
+                "RepresentationProbeChecker requires HuggingFaceAdapter "
+                f"(got {type(llm).__name__}). The probe reads hidden states from the "
+                "generating model, so only the HuggingFace adapter is supported."
+            )
+        if not llm._expose_hidden_states:
+            raise ConfigurationError(
+                "RepresentationProbeChecker requires HuggingFaceAdapter to be "
+                "initialized with expose_hidden_states=True."
+            )
+
+
 def from_config(config_path: str = "config.yaml") -> PrismPipeline:
     """Construct a PrismPipeline from config.yaml."""
     import os
@@ -189,7 +242,6 @@ def from_config(config_path: str = "config.yaml") -> PrismPipeline:
     from llm.ollama_adapter import OllamaAdapter
     from checker.rule_based import RuleBasedChecker
     from checker.classifier import ClassifierChecker
-    from checker.llm_judge import LLMJudgeChecker
     from checker.probe import RepresentationProbeChecker
     from checker.llama_guard import LlamaGuardChecker
     from checker.cascade import CascadeChecker
@@ -218,7 +270,10 @@ def from_config(config_path: str = "config.yaml") -> PrismPipeline:
             hf_token=os.environ.get(llm_cfg.get("hf_token_env", "HF_TOKEN")),
             device=llm_cfg.get("device", "cpu"),
         ),
-        "openai":    lambda: _stub_error("openai"),
+        "openai":    lambda: OpenAIAdapter(
+            model_id=llm_cfg["model_id"],
+            api_key_env=llm_cfg.get("openai_api_key_env", "OPENAI_API_KEY"),
+        ),
         "anthropic": lambda: _stub_error("anthropic"),
         "ollama":    lambda: OllamaAdapter(
             model_id=llm_cfg["model_id"],
@@ -229,12 +284,11 @@ def from_config(config_path: str = "config.yaml") -> PrismPipeline:
     llm_device = llm_cfg.get("device", "cpu")
     _checkers = {
         "rule_based":  lambda: RuleBasedChecker(),
-        "classifier":  lambda: ClassifierChecker(model_name=model_path or "unitary/toxic-bert", device=device, threshold=threshold),
-        "llm_judge":   lambda: LLMJudgeChecker(device=llm_device, max_new_tokens=8),
+        "classifier":  lambda: ClassifierChecker(model_name=model_path or "KoalaAI/Text-Moderation", device=device, threshold=threshold),
         "probe":       lambda: RepresentationProbeChecker.from_file(model_path) if model_path and os.path.exists(model_path) else RepresentationProbeChecker(),
         "llama_guard": lambda: LlamaGuardChecker(device=llm_device, hf_token=hf_token),
         "cascade":     lambda: CascadeChecker(
-            fast=ClassifierChecker(model_name="unitary/toxic-bert", device="cpu", threshold=0.5),
+            fast=ClassifierChecker(model_name="KoalaAI/Text-Moderation", device="cpu", threshold=0.5),
             slow=LlamaGuardChecker(device=llm_device, hf_token=hf_token),
             skip_below=chk_cfg.get("cascade_skip_below", 0.4),
         ),
@@ -260,9 +314,13 @@ def from_config(config_path: str = "config.yaml") -> PrismPipeline:
     if mode == "both":
         mode = "full_output"
 
+    llm_instance = _adapters[provider]()
+    checker_instance = _checkers[chk_type]()
+    validate_config(llm_instance, checker_instance)
+
     return PrismPipeline(
-        llm=_adapters[provider](),
-        checker=_checkers[chk_type](),
+        llm=llm_instance,
+        checker=checker_instance,
         pre_check=pre_check,
         buffer_config=BufferConfig(buffer_size=exp_cfg.get("buffer_size", 30), overlap=exp_cfg.get("overlap", 5)),
         gen_config=GenerationConfig(max_tokens=llm_cfg.get("max_tokens", 512), temperature=llm_cfg.get("temperature", 0.7)),

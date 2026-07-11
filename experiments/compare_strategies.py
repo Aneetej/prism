@@ -29,6 +29,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from buffer import BufferConfig
 from checker.rule_based import RuleBasedChecker
+from checker.classifier import ClassifierChecker
+from checker.llama_guard import LlamaGuardChecker
+from checker.cascade import CascadeChecker
 from checker.base import SafetyChecker
 from llm.base import GenerationConfig
 from pre_check import PreCheck
@@ -212,11 +215,18 @@ def run_experiment(
     with open(test_set_path) as f:
         examples = json.load(f)
 
-    checker_map = {
-        "rule_based": RuleBasedChecker,
+    import os
+    hf_token = os.environ.get("HF_TOKEN")
+    checker_map: dict[str, SafetyChecker] = {
+        "rule_based":  RuleBasedChecker(),
+        "classifier":  ClassifierChecker(model_name="KoalaAI/Text-Moderation"),
+        "llama_guard": LlamaGuardChecker(hf_token=hf_token),
+        "cascade":     CascadeChecker(
+            fast=ClassifierChecker(model_name="KoalaAI/Text-Moderation"),
+            slow=LlamaGuardChecker(hf_token=hf_token),
+        ),
     }
-    checker_cls = checker_map.get(checker_name, RuleBasedChecker)
-    checker = checker_cls()
+    checker = checker_map.get(checker_name) or RuleBasedChecker()
     pre_check = PreCheck()
     buffer_config = BufferConfig(buffer_size=buffer_size, overlap=overlap)
 
@@ -300,7 +310,7 @@ def main():
     parser.add_argument(
         "--checker",
         default="rule_based",
-        choices=["rule_based", "classifier", "llm_judge", "probe"],
+        choices=["rule_based", "classifier", "llama_guard", "cascade"],
     )
     parser.add_argument("--buffer-size", type=int, default=30)
     parser.add_argument("--overlap", type=int, default=5)

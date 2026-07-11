@@ -28,13 +28,19 @@ class RuleBasedChecker(SafetyChecker):
         self._rules = self._compile(taxonomy["categories"])
 
     def check(self, prompt: str, output: str) -> CheckResult:
-        """Scan the combined prompt and output for blocked keywords and regex patterns."""
+        """Scan output (and regex patterns over full context) for blocked content.
+
+        The keyword blocklist runs only on the generated output so that a question like
+        "What happened in the Tokyo sarin attack?" doesn't trigger a block when the
+        model's response is a benign historical summary. Regex patterns run over the
+        full prompt+output so cross-turn injection patterns are caught.
+        """
         start = time.perf_counter()
-        #Check both prompt and output; the checker receives full context.
-        text = (prompt + " " + output).lower()
+        output_lower = output.lower()
+        full_text = prompt + " " + output
 
         for kw in _KEYWORD_BLOCKLIST:
-            if kw in text:
+            if kw in output_lower:
                 return CheckResult(
                     passed=False,
                     confidence=self.confidence_on_match,
@@ -44,7 +50,7 @@ class RuleBasedChecker(SafetyChecker):
 
         for category, keywords, patterns in self._rules:
             for kw in keywords:
-                if kw in text:
+                if kw in output_lower:
                     return CheckResult(
                         passed=False,
                         confidence=self.confidence_on_match,
@@ -52,7 +58,7 @@ class RuleBasedChecker(SafetyChecker):
                         latency_ms=(time.perf_counter() - start) * 1000,
                     )
             for pattern in patterns:
-                if pattern.search(prompt + " " + output):
+                if pattern.search(full_text):
                     return CheckResult(
                         passed=False,
                         confidence=self.confidence_on_match,

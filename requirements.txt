@@ -28,3 +28,4 @@ scikit-learn>=1.4.0
 
 # Evaluation
 pandas>=2.0.0
+datasets>=2.19.0

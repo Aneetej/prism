@@ -4,8 +4,11 @@ __pycache__/
 .env
 *.env
 
-# Generated eval datasets (fetch with: python eval/fetch_xstest.py)
+# Generated eval datasets (fetch with: python eval/fetch_xstest.py / eval/fetch_benchmark.py)
 eval/datasets/xstest_fp.jsonl
+eval/datasets/benchmark_train.jsonl
+eval/datasets/benchmark_test.jsonl
+eval/datasets/benchmark_cbrn.jsonl
 
 # Model weights (large binary files)
 models/

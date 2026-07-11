@@ -105,32 +105,49 @@ def extract_activations(
     return np.stack(activations_list).astype(np.float32), labels
 
 
-def load_training_examples(datasets_dir: Path) -> list[dict]:
+def _load_jsonl(path: Path) -> list[dict]:
     examples = []
-    # xstest_fp provides diverse safe examples beyond the 10 in safe.jsonl
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                examples.append(json.loads(line))
+    return examples
+
+
+def load_training_examples(datasets_dir: Path) -> list[dict]:
+    benchmark = datasets_dir / "benchmark_train.jsonl"
+    if benchmark.exists():
+        return _load_jsonl(benchmark)
+    # Fallback: small hand-curated sets (no train/test split — metrics will be inflated)
+    print(
+        "  [warn] benchmark_train.jsonl not found. Falling back to harmful.jsonl + safe.jsonl.\n"
+        "         Run eval/fetch_benchmark.py for a proper train/test split.",
+        file=sys.stderr,
+    )
+    examples = []
     for fname in ["harmful.jsonl", "safe.jsonl", "xstest_fp.jsonl"]:
         fpath = datasets_dir / fname
         if fpath.exists():
-            with open(fpath) as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        examples.append(json.loads(line))
-        elif fname != "xstest_fp.jsonl":
-            print(f"  [warn] not found: {fpath}", file=sys.stderr)
+            examples.extend(_load_jsonl(fpath))
     return examples
 
 
 def load_eval_examples(datasets_dir: Path) -> list[dict]:
+    benchmark = datasets_dir / "benchmark_test.jsonl"
+    if benchmark.exists():
+        return _load_jsonl(benchmark)
+    # Fallback: use boundary + xstest but warn clearly about data leakage
+    print(
+        "  [warn] benchmark_test.jsonl not found. Falling back to boundary.jsonl + xstest_fp.jsonl.\n"
+        "         Note: harmful.jsonl and safe.jsonl are excluded here to avoid eval on training data.",
+        file=sys.stderr,
+    )
     examples = []
-    for fname in ["harmful.jsonl", "safe.jsonl", "boundary.jsonl", "xstest_fp.jsonl"]:
+    for fname in ["boundary.jsonl", "xstest_fp.jsonl"]:
         fpath = datasets_dir / fname
         if fpath.exists():
-            with open(fpath) as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        examples.append(json.loads(line))
+            examples.extend(_load_jsonl(fpath))
     return examples
 
 

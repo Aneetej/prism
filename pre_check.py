@@ -147,10 +147,16 @@ class PreCheck:
         return PreCheckResult(passed=True, latency_ms=(time.perf_counter() - start) * 1000)
 
     def _normalise(self, text: str) -> str:
-        """Lowercase, collapse whitespace, NFC-normalize, and substitute l33tspeak."""
+        """Lowercase, collapse whitespace, NFKC-normalize, and substitute l33tspeak.
+
+        NFKC normalization decomposes visually-similar Unicode characters used for
+        evasion (e.g., fullwidth letters, homoglyphs) without discarding legitimate
+        non-ASCII content such as Arabic, Chinese, or accented Latin text.
+        NFC was replaced with NFKC so that compatibility decompositions (ﬁ → fi,
+        ① → 1, etc.) are applied before the leet-speak substitution runs.
+        """
         if self.normalize_unicode:
-            text = unicodedata.normalize("NFC", text)
-            text = text.encode("ascii", errors="ignore").decode("ascii")
+            text = unicodedata.normalize("NFKC", text)
         text = " ".join(text.split())
         if self.normalize_leet:
             text = "".join(self._leet_map.get(ch, ch) for ch in text)

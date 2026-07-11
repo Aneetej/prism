@@ -1,4 +1,15 @@
-#Not using anymore
+"""
+DEPRECATED — LLMJudgeChecker is no longer used in the active pipeline.
+
+Use LlamaGuardChecker (checker/llama_guard.py) instead. Llama Guard 3 is a
+purpose-built safety classifier with a standardised taxonomy (S1–S14) and higher
+accuracy. LLMJudgeChecker has a prompt-injection risk (user prompt is interpolated
+directly into the judge's system prompt) and was superseded before the first
+experiment run.
+
+This file is kept for reference only. It is not registered in from_config() or
+run_eval.py's CHECKER_FACTORIES.
+"""
 from __future__ import annotations
 
 import time
